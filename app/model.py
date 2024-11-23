@@ -19,9 +19,9 @@ for dirname, _, filenames in os.walk('./datasets/'):
             df_test = pd.read_csv(os.path.join(dirname, filename))
 
 # Verificar que los datasets se cargaron correctamente
-if df_train and not df_train.empty:
+if df_train is not None and not df_train.empty:
     print('Train dataframe imported successfully!')
-if df_test and not df_test.empty:
+if df_test is not None and not df_test.empty:
     print('Test dataframe imported successfully!')
 
 # Preprocesamiento de datos
