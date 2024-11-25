@@ -5,7 +5,7 @@ from joblib import load
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 
 # Cargar el modelo y el escalador previamente exportados
-model_path = 'models/modelo_robusto.joblib'
+model_path = 'models/model_linear.joblib'
 scaler_path = 'models/scaler.joblib'
 
 model = load(model_path)
