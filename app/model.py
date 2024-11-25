@@ -2,8 +2,9 @@ import pandas as pd
 import os
 import warnings
 from joblib import dump
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.metrics import mean_squared_error
 from sklearn.preprocessing import StandardScaler
-import statsmodels.api as sm
 
 warnings.simplefilter("ignore")
 
@@ -43,11 +44,16 @@ print(f"Scaler exportado con éxito a {scaler_path}")
 X_train = pd.DataFrame(scaler.transform(X_train_raw), columns=X_train_raw.columns)
 X_test = pd.DataFrame(scaler.transform(X_test_raw), columns=X_test_raw.columns)
 
-# Entrenamiento del modelo
-model_robust = sm.OLS(y_train, sm.add_constant(X_train)).fit()
-print(model_robust.summary())
+# Entrenamiento del modelo Random Forest
+rf_model = RandomForestRegressor(n_estimators=100, random_state=42)
+rf_model.fit(X_train, y_train)
+
+# Evaluar el modelo
+y_pred = rf_model.predict(X_test)
+rmse = mean_squared_error(y_test, y_pred, squared=False)
+print(f"RMSE del modelo Random Forest: {rmse}")
 
 # Exportar el modelo
-export_path = 'models/modelo_robusto.joblib'
-dump(model_robust, export_path)
-print(f"Modelo exportado con éxito a {export_path}")
+export_path = 'models/random_forest_model.joblib'
+dump(rf_model, export_path)
+print(f"Modelo Random Forest exportado con éxito a {export_path}")

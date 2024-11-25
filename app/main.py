@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 import streamlit as st
 from joblib import load
+from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 
 # Cargar el modelo y el escalador previamente exportados
 model_path = 'models/modelo_robusto.joblib'
@@ -16,70 +17,65 @@ features = ['bedrooms', 'grade', 'has_basement', 'living_in_m2', 'renovated',
             'has_lavatory', 'single_floor', 'month', 'quartile_zone']
 
 # Título del dashboard
-st.title("Predicción del Precio de Casas")
+st.title("Análisis del Modelo de Predicción de Precios de Casas")
 
 st.write("""
-Este dashboard predice el precio de una casa en función de características como habitaciones, baños, tamaño y ubicación.
-Por favor, ingresa los datos solicitados en el menú lateral.
+Este dashboard utiliza un dataset preprocesado para analizar el rendimiento del modelo de regresión lineal entrenado.
 """)
 
-# Sección de entrada de datos
-st.sidebar.header("Ingrese las características de la casa")
+# Cargar el dataset preprocesado
+data_path = './datasets/df_train.csv'
 
-# Crear campos para entrada de datos (deben coincidir con las características del modelo)
-input_data = {
-    'bedrooms': st.sidebar.number_input('Habitaciones', min_value=0, step=1, value=3),
-    'grade': st.sidebar.slider('Calidad de construcción (1-13)', min_value=1, max_value=13, value=7),
-    'has_basement': st.sidebar.selectbox('¿Tiene sótano?', options=[True, False], format_func=lambda x: "Sí" if x else "No"),
-    'living_in_m2': st.sidebar.number_input('Área habitable (m²)', min_value=0.0, step=1.0, value=120.0),
-    'renovated': st.sidebar.selectbox('¿Está renovada?', options=[True, False], format_func=lambda x: "Sí" if x else "No"),
-    'nice_view': st.sidebar.selectbox('¿Tiene buena vista?', options=[True, False], format_func=lambda x: "Sí" if x else "No"),
-    'perfect_condition': st.sidebar.selectbox('¿En condición perfecta?', options=[True, False], format_func=lambda x: "Sí" if x else "No"),
-    'real_bathrooms': st.sidebar.number_input('Baños reales', min_value=0, step=1, value=2),
-    'has_lavatory': st.sidebar.selectbox('¿Tiene lavatorio?', options=[True, False], format_func=lambda x: "Sí" if x else "No"),
-    'single_floor': st.sidebar.selectbox('¿Es de un solo piso?', options=[True, False], format_func=lambda x: "Sí" if x else "No"),
-    'quartile_zone': st.sidebar.slider('Zona por cuartil (1-4)', min_value=1, max_value=4, value=2),
-    'date': st.sidebar.date_input("Fecha de la venta", value=pd.Timestamp.now())
-}
+try:
+    # Cargar el dataset
+    data = pd.read_csv(data_path)
+    st.success("Dataset cargado exitosamente")
 
-# Convertir la fecha a mes
-input_data['month'] = pd.to_datetime(input_data['date']).month
+    # Mostrar vista general del dataset
+    st.subheader("Vista General del Dataset")
+    st.write(data.head())
 
-# Eliminar la columna 'date' ya que no se utiliza en el modelo
-del input_data['date']
+    # Descripción estadística
+    st.subheader("Estadísticas Descriptivas")
+    st.write(data.describe())
 
-# Convertir datos categóricos booleanos a enteros
-for col in ['has_basement', 'renovated', 'nice_view', 'perfect_condition', 'has_lavatory', 'single_floor']:
-    input_data[col] = int(input_data[col])
+    # Distribución de las características clave
+    st.subheader("Distribución de las Características")
+    selected_feature = st.selectbox("Selecciona una característica para graficar:", features)
+    st.bar_chart(data[selected_feature].value_counts())
 
-# Convertir la entrada a un DataFrame
-input_df = pd.DataFrame([input_data])
+    # Evaluación del modelo
+    st.subheader("Evaluación del Modelo")
 
-# Escalar los datos
-input_scaled = scaler.transform(input_df[features])
+    # Verificar si la variable objetivo está en el dataset
+    if 'price' in data.columns:
+        X = data[features]
+        y = data['price']
 
-# Agregar la constante manualmente
-input_scaled_with_const = np.c_[np.ones((input_scaled.shape[0], 1)), input_scaled]
+        # Escalar las características
+        X_scaled = scaler.transform(X)
 
-# Verificar las dimensiones después de agregar la constante
-st.write("Dimensiones después de agregar constante:", input_scaled_with_const.shape)
+        # Agregar constante
+        X_scaled_with_const = np.c_[np.ones((X_scaled.shape[0], 1)), X_scaled]
 
-# Mostrar los datos ingresados
-st.subheader("Datos ingresados:")
-st.write(input_df)
+        # Predicciones del modelo
+        predictions = model.predict(X_scaled_with_const)
 
-# Mostrar los valores escalados
-st.write("Valores escalados utilizados en la predicción (incluye constante):")
-st.write(input_scaled_with_const)
+        # Calcular métricas
+        mse = mean_squared_error(y, predictions)
+        mae = mean_absolute_error(y, predictions)
+        r2 = r2_score(y, predictions)
 
-# Realizar la predicción
-if st.button("Predecir Precio"):
-    try:
-        # Predecir usando el modelo con la constante incluida
-        pred_price = model.predict(input_scaled_with_const)
-        st.subheader("Predicción del Precio")
-        st.write(f"El precio estimado de la casa es: ${pred_price[0]:,.2f}")
-    except ValueError as e:
-        st.error(f"Error en la predicción: {e}")
-    except Exception as e:
-        st.error(f"Error inesperado: {e}")
+        # Mostrar métricas
+        st.write(f"**Mean Squared Error (MSE):** {mse:,.2f}")
+        st.write(f"**Mean Absolute Error (MAE):** {mae:,.2f}")
+        st.write(f"**R² Score:** {r2:.2f}")
+
+        # Comparación de predicciones y valores reales
+        st.subheader("Comparación: Predicciones vs Valores Reales")
+        comparison_df = pd.DataFrame({'Real Price': y, 'Predicted Price': predictions})
+        st.write(comparison_df.head(10))
+        st.line_chart(comparison_df.head(50))
+
+except FileNotFoundError:
+    st.error(f"No se encontró el archivo {data_path}. Por favor, asegúrate de que está en la ruta especificada.")
