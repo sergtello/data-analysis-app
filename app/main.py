@@ -81,7 +81,7 @@ try:
 
     if option is not None:
         model = model_dict[option]
-        predictions = []
+        predictions = None
         # Verificar si la variable objetivo está en el dataset
         if 'price' in data.columns:
             X = data[features]
@@ -101,7 +101,7 @@ try:
             else:
                 st.error("No se encontró un modelo válido")
 
-            if predictions:
+            if predictions is not None:
                 # Calcular métricas
                 mse = mean_squared_error(y, predictions)
                 mae = mean_absolute_error(y, predictions)
