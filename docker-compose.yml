@@ -1,0 +1,30 @@
+version: "2.17.0"
+name: data-analysis
+services:
+  streamlit:
+    build:
+      context: .
+    image: streamlit-app:dev
+    user: root
+    container_name: streamlit_dev
+    command: streamlit run app/main.py
+    ports:
+      - "8501:${PORT:-8501}"
+    volumes:
+      - .:/DataAnalysis
+    env_file:
+      - .env
+    stdin_open: true
+    tty: true
+
+  ngrok:
+    image: ngrok/ngrok
+    container_name: streamlit_ngrok
+    environment:
+      NGROK_AUTHTOKEN: ${NGROK_AUTHTOKEN?:error}
+    command: tunnel --label edge=${NGROK_EDGE:?error} ${STREAMLIT_URL?:error}
+    depends_on:
+      - streamlit
+
+networks:
+  default:
