@@ -1,9 +1,12 @@
+import warnings
 import numpy as np
 import pandas as pd
 import streamlit as st
 from joblib import load
 from enum import Enum
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
+
+warnings.simplefilter("ignore")
 
 
 class PredictionModelTypes(str, Enum):
@@ -78,6 +81,7 @@ try:
 
     if option is not None:
         model = model_dict[option]
+        predictions = []
         # Verificar si la variable objetivo está en el dataset
         if 'price' in data.columns:
             X = data[features]
@@ -90,25 +94,29 @@ try:
             X_scaled_with_const = np.c_[np.ones((X_scaled.shape[0], 1)), X_scaled]
 
             # Predicciones del modelo
-            predictions = model.predict(X_scaled)
-            if model == model_linear:
+            if model == model_rf:
+                predictions = model.predict(X_scaled)
+            elif model == model_linear:
                 predictions = model.predict(X_scaled_with_const)
+            else:
+                st.error("No se encontró un modelo válido")
 
-            # Calcular métricas
-            mse = mean_squared_error(y, predictions)
-            mae = mean_absolute_error(y, predictions)
-            r2 = r2_score(y, predictions)
+            if predictions:
+                # Calcular métricas
+                mse = mean_squared_error(y, predictions)
+                mae = mean_absolute_error(y, predictions)
+                r2 = r2_score(y, predictions)
 
-            # Mostrar métricas
-            st.write(f"**Mean Squared Error (MSE):** {mse:,.2f}")
-            st.write(f"**Mean Absolute Error (MAE):** {mae:,.2f}")
-            st.write(f"**R² Score:** {r2:.2f}")
+                # Mostrar métricas
+                st.write(f"**Mean Squared Error (MSE):** {mse:,.2f}")
+                st.write(f"**Mean Absolute Error (MAE):** {mae:,.2f}")
+                st.write(f"**R² Score:** {r2:.2f}")
 
-            # Comparación de predicciones y valores reales
-            st.subheader("Comparación: Predicciones vs Valores Reales")
-            comparison_df = pd.DataFrame({'Real Price': y, 'Predicted Price': predictions})
-            st.write(comparison_df.head(10))
-            st.line_chart(comparison_df.head(50))
+                # Comparación de predicciones y valores reales
+                st.subheader("Comparación: Predicciones vs Valores Reales")
+                comparison_df = pd.DataFrame({'Real Price': y, 'Predicted Price': predictions})
+                st.write(comparison_df.head(10))
+                st.line_chart(comparison_df.head(50))
 
 except FileNotFoundError:
     st.error(f"No se encontró el archivo {data_path}. Por favor, asegúrate de que está en la ruta especificada.")

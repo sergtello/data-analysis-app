@@ -163,3 +163,4 @@ cython_debug/
 
 # RF Model
 models/model_rf.joblib
+predictions/
